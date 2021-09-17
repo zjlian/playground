@@ -40,9 +40,10 @@ namespace play
             }
         }
 
-        void submit(TaskType task)
+        template <Callable Func>
+        void post(Func func)
         {
-            tasks_.push(task);
+            tasks_.push(std::move(func));
         }
 
         void stop()

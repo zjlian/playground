@@ -50,19 +50,19 @@ int main()
 
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
-    pool.submit([] {
+    pool.post([] {
         endloop("1111");
     });
 
-    pool.submit([] {
+    pool.post([] {
         endloop("2222");
     });
 
-    pool.submit([] {
+    pool.post([] {
         endloop("3333");
     });
 
-    pool.submit([] {
+    pool.post([] {
         endloop("4444");
     });
 
