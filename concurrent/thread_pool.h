@@ -30,7 +30,7 @@ namespace play
 
         ~ThreadPool()
         {
-            stop_ = true;
+            stop();
             for (auto &thr : threads_)
             {
                 if (thr.joinable())
@@ -43,6 +43,11 @@ namespace play
         void submit(TaskType task)
         {
             tasks_.push(task);
+        }
+
+        void stop()
+        {
+            stop_ = true;
         }
 
     protected:

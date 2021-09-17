@@ -33,9 +33,11 @@ void test(Callable<int32_t, int32_t> auto fn)
     std::cout << a << " " << b << std::endl;
 }
 
+std::atomic_bool stop{false};
+
 void endloop(const char *msg)
 {
-    while (true)
+    while (!stop)
     {
         std::cout << msg << std::endl;
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
@@ -44,7 +46,6 @@ void endloop(const char *msg)
 
 int main()
 {
-    using TaskType = std::function<void()>;
     ThreadPool pool;
 
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
@@ -64,4 +65,9 @@ int main()
     pool.submit([] {
         endloop("4444");
     });
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+
+    pool.stop();
+    stop = true;
 }
