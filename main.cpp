@@ -2,14 +2,17 @@
 #include "concurrent/concepts.h"
 #include "concurrent/thread_pool.h"
 #include "concurrent/thread_safe_queue.h"
+#include "utility/callable_wrapper.h"
 
 #include <cassert>
 #include <chrono>
 #include <cstdint>
 #include <functional>
+#include <future>
 #include <iostream>
 #include <sys/types.h>
 #include <thread>
+#include <type_traits>
 #include <vector>
 
 using namespace play;
@@ -35,39 +38,48 @@ void test(Callable<int32_t, int32_t> auto fn)
 
 std::atomic_bool stop{false};
 
-void endloop(const char *msg)
+int endloop(const char *msg)
 {
     while (!stop)
     {
         std::cout << msg << std::endl;
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
+    return 0;
+}
+
+void test(CallableWrapper callable)
+{
+    std::cout << "call CallableWrapper" << std::endl;
+    callable();
 }
 
 int main()
 {
     ThreadPool pool;
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    std::vector<std::future<const char *>> results;
 
-    pool.post([] {
-        endloop("1111");
-    });
+    results.push_back(
+        pool.post([] {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+            return "哈哈";
+        }));
 
-    pool.post([] {
-        endloop("2222");
-    });
+    results.push_back(
+        pool.post([] {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+            return "哦哦";
+        }));
 
-    pool.post([] {
-        endloop("3333");
-    });
+    results.push_back(
+        pool.post([] {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+            return "嘻嘻";
+        }));
 
-    pool.post([] {
-        endloop("4444");
-    });
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(5000));
-
-    pool.stop();
-    stop = true;
+    for (auto &rt : results)
+    {
+        std::cout << rt.get() << std::endl;
+    }
 }
