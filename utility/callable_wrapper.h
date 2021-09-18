@@ -11,17 +11,17 @@ namespace play
     /// @brief 禁用拷贝的可调用对象的类型消除包装
     class CallableWrapper : public Nocopyable
     {
-        struct Base
+        class ImplementBase
         {
+        public:
             virtual void call() = 0;
-            virtual ~Base() = 0;
+            virtual ~ImplementBase() = default;
         };
 
         template <Callable Func>
-        struct Implement : Base
+        class Implement : public ImplementBase
         {
-            Func fn;
-
+        public:
             explicit Implement(Func &&f)
                 : fn(std::move(f))
             {
@@ -31,12 +31,15 @@ namespace play
             {
                 fn();
             }
+
+        private:
+            Func fn;
         };
 
     public:
         template <Callable Func>
-        explicit CallableWrapper(Func &&f)
-            : impl_(std::make_unique<Func>(std::move(f))) {}
+        CallableWrapper(Func &&f)
+            : impl_(std::make_unique<Implement<Func>>(std::move(f))) {}
 
         void operator()()
         {
@@ -53,7 +56,7 @@ namespace play
         }
 
     private:
-        std::unique_ptr<Base> impl_;
+        std::unique_ptr<ImplementBase> impl_;
     };
 
 } // namespace play
