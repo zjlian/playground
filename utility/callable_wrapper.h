@@ -8,7 +8,7 @@
 namespace play
 {
 
-    /// @brief 禁用拷贝的可调用对象的类型消除包装
+    /// @brief 禁用拷贝的可调用对象的类型擦除包装
     class CallableWrapper : public Nocopyable
     {
         class ImplementBase
@@ -37,6 +37,9 @@ namespace play
         };
 
     public:
+        CallableWrapper()
+            : impl_(nullptr) {}
+
         template <Callable Func>
         CallableWrapper(Func &&f)
             : impl_(std::make_unique<Implement<Func>>(std::move(f))) {}
@@ -53,6 +56,11 @@ namespace play
         {
             impl_ = std::move(other.impl_);
             return *this;
+        }
+
+        explicit operator bool() const noexcept
+        {
+            return impl_ != nullptr;
         }
 
     private:
