@@ -1,6 +1,7 @@
 - concepts/
-  - base.h *通用的 concecpt*
-- *concurrent/*
-  - concepts.h *专用的 concept*
-  - thread_pool.h *使用了 concept 的线程池*
-  - thread_safe_queue.h *线程安全的阻塞队列*
+  - **base.h** 通用的 concecpt
+- concurrent/
+  - **concepts.h** 专用的 concept
+  - **thread_pool.h** 使用了 concept 的线程池，支持阻塞等待任务结果、线程局部任务队列和任务窃取
+  - **thread_safe_queue.h** 线程安全的阻塞队列
+  - **thread_safe_deque.h** 线程安全的阻塞双端队列
