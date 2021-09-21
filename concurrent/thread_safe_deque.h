@@ -9,13 +9,13 @@
 namespace play::ThreadSafe
 {
     template <typename Type>
-    class Queue
+    class Deque
     {
     public:
         using ValueType = Type;
 
-        Queue() = default;
-        ~Queue() = default;
+        Deque() = default;
+        ~Deque() = default;
 
         void push(Type value)
         {
@@ -35,6 +35,17 @@ namespace play::ThreadSafe
             return value;
         }
 
+        Type waitAndPopBack()
+        {
+            std::unique_lock<std::mutex> lock(mtx_);
+            cond_.wait(lock, [&] {
+                return !data_.empty();
+            });
+            auto value = std::move(data_.back());
+            data_.pop_back();
+            return value;
+        }
+
         std::optional<Type> tryPop()
         {
             std::lock_guard<std::mutex> lock(mtx_);
@@ -44,6 +55,18 @@ namespace play::ThreadSafe
             }
             auto value = std::move(data_.front());
             data_.pop_front();
+            return value;
+        }
+
+        std::optional<Type> tryPopBack()
+        {
+            std::lock_guard<std::mutex> lock(mtx_);
+            if (data_.empty())
+            {
+                return {};
+            }
+            auto value = std::move(data_.back());
+            data_.pop_back();
             return value;
         }
 

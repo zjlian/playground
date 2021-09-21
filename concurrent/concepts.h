@@ -3,6 +3,7 @@
 #include "concepts/base.h"
 #include <functional>
 #include <memory>
+#include <optional>
 
 namespace play
 {
@@ -16,6 +17,15 @@ namespace play
         { t.waitAndPop() } -> Same<typename Type::ValueType>;
         { t.tryPop() } -> Same<std::optional<typename Type::ValueType>>;
         { t.empty() } -> Same<bool>;
+    };
+
+    template <typename Type>
+    concept BlockableDeque =
+        BlockableQueue<Type> &&
+        requires(Type t)
+    {
+        { t.waitAndPopBack() } -> Same<typename Type::ValueType>;
+        { t.tryPopBack() } -> Same<std::optional<typename Type::ValueType>>;
     };
 
 } // namespace play

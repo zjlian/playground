@@ -6,10 +6,12 @@
 
 #include <cassert>
 #include <chrono>
+#include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <future>
 #include <iostream>
+#include <sstream>
 #include <sys/types.h>
 #include <thread>
 #include <type_traits>
@@ -23,7 +25,7 @@ requires Callable<typename QueueType::ValueType>
 void test(QueueType &que)
 {
     que.push([] {
-        std::cout << "test" << std::endl;
+        std::cerr << "test" << std::endl;
     });
 }
 
@@ -33,7 +35,7 @@ void test(Callable<int32_t, int32_t> auto fn)
     int32_t b = 20;
     fn(a, b);
     assert(a == 20 && b == 10);
-    std::cout << a << " " << b << std::endl;
+    std::cerr << a << " " << b << std::endl;
 }
 
 std::atomic_bool stop{false};
@@ -42,7 +44,7 @@ int endloop(const char *msg)
 {
     while (!stop)
     {
-        std::cout << msg << std::endl;
+        std::cerr << msg << std::endl;
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
     return 0;
@@ -50,8 +52,15 @@ int endloop(const char *msg)
 
 void test(CallableWrapper callable)
 {
-    std::cout << "call CallableWrapper" << std::endl;
+    std::cerr << "call CallableWrapper" << std::endl;
     callable();
+}
+
+std::string ThreadIdString()
+{
+    std::stringstream ss;
+    ss << gettid();
+    return ss.str();
 }
 
 int main()
@@ -61,25 +70,17 @@ int main()
     std::vector<std::future<const char *>> results;
 
     results.push_back(
-        pool.post([] {
-            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        pool.post([&] {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            for (size_t i = 0; i < 10000; i++)
+            {
+                pool.post([=] {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                    std::cerr << "哈哈哈哈" << i << std::endl;
+                });
+            }
             return "哈哈";
         }));
 
-    results.push_back(
-        pool.post([] {
-            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-            return "哦哦";
-        }));
-
-    results.push_back(
-        pool.post([] {
-            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-            return "嘻嘻";
-        }));
-
-    for (auto &rt : results)
-    {
-        std::cout << rt.get() << std::endl;
-    }
+    std::this_thread::sleep_for(std::chrono::seconds(20));
 }
