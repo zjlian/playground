@@ -6,6 +6,7 @@
 
 #include <cassert>
 #include <chrono>
+#include <coroutine>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -19,68 +20,43 @@
 
 using namespace play;
 
-// 泛型函数，参数 que 必须符合 concept BlockableQueue，que 内的元素必须符合 concept Callable
-template <BlockableQueue QueueType>
-requires Callable<typename QueueType::ValueType>
-void test(QueueType &que)
+struct HelloCoroutine
 {
-    que.push([] {
-        std::cerr << "test" << std::endl;
-    });
-}
-
-void test(Callable<int32_t, int32_t> auto fn)
-{
-    int32_t a = 10;
-    int32_t b = 20;
-    fn(a, b);
-    assert(a == 20 && b == 10);
-    std::cerr << a << " " << b << std::endl;
-}
-
-std::atomic_bool stop{false};
-
-int endloop(const char *msg)
-{
-    while (!stop)
+    struct HelloPromise
     {
-        std::cerr << msg << std::endl;
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-    }
-    return 0;
-}
+        HelloCoroutine get_return_object()
+        {
+            return std::coroutine_handle<HelloPromise>::from_promise(*this);
+        }
+        std::suspend_never initial_suspend()
+        {
+            return {};
+        }
+        // 在 final_suspend() 挂起了协程，所以要手动 destroy
+        std::suspend_always final_suspend() noexcept
+        {
+            return {};
+        }
+        void unhandled_exception() {}
+    };
 
-void test(CallableWrapper callable)
-{
-    std::cerr << "call CallableWrapper" << std::endl;
-    callable();
-}
+    using promise_type = HelloPromise;
+    HelloCoroutine(std::coroutine_handle<HelloPromise> h)
+        : handle(h) {}
 
-std::string ThreadIdString()
+    std::coroutine_handle<HelloPromise> handle;
+};
+
+HelloCoroutine hello()
 {
-    std::stringstream ss;
-    ss << gettid();
-    return ss.str();
+    std::cout << "Hello " << std::endl;
+    co_await std::suspend_always{};
+    std::cout << "Coroutine " << std::endl;
 }
 
 int main()
 {
-    ThreadPool pool;
-
-    std::vector<std::future<const char *>> results;
-
-    results.push_back(
-        pool.post([&] {
-            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-            for (size_t i = 0; i < 20; i++)
-            {
-                pool.post([=] {
-                    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-                    std::cerr << "哈" << i << std::endl;
-                });
-            }
-            return "-";
-        }));
-
-    std::this_thread::sleep_for(std::chrono::seconds(10));
+    HelloCoroutine co = hello();
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    co.handle.resume();
 }
