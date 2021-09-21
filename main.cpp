@@ -71,16 +71,16 @@ int main()
 
     results.push_back(
         pool.post([&] {
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
-            for (size_t i = 0; i < 10000; i++)
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+            for (size_t i = 0; i < 20; i++)
             {
                 pool.post([=] {
-                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
-                    std::cerr << "哈哈哈哈" << i << std::endl;
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+                    std::cerr << "哈" << i << std::endl;
                 });
             }
-            return "哈哈";
+            return "-";
         }));
 
-    std::this_thread::sleep_for(std::chrono::seconds(20));
+    std::this_thread::sleep_for(std::chrono::seconds(10));
 }

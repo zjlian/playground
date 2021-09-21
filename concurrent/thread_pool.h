@@ -12,6 +12,7 @@
 #include <future>
 #include <iostream>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <queue>
 #include <thread>
@@ -72,6 +73,8 @@ namespace play
             {
                 tasks_.push(std::move(task));
             }
+            ++task_count_;
+            cond_.notify_one();
             return result;
         }
 
@@ -81,6 +84,7 @@ namespace play
             std::cout << "ThreadPool::stop()" << std::endl;
 #endif
             stop_ = true;
+            cond_.notify_all();
         }
 
     protected:
@@ -92,6 +96,16 @@ namespace play
 
             while (!stop_)
             {
+                {
+                    std::unique_lock<std::mutex> lock(mtx_);
+                    cond_.wait(lock, [&] {
+                        return stop_ || task_count_ > 0;
+                    });
+                    if (stop_)
+                    {
+                        return;
+                    }
+                }
                 nextTask();
             }
         }
@@ -102,6 +116,7 @@ namespace play
             auto task = getLocalTask();
             if (task)
             {
+                --task_count_;
                 (*task)();
                 return;
             }
@@ -109,6 +124,7 @@ namespace play
             task = getMainTask();
             if (task)
             {
+                --task_count_;
                 (*task)();
                 return;
             }
@@ -116,6 +132,7 @@ namespace play
             task = getStolenTask();
             if (task)
             {
+                --task_count_;
                 (*task)();
                 return;
             }
@@ -153,11 +170,14 @@ namespace play
 
     private:
         std::atomic_bool stop_{false};
+        std::mutex mtx_{};
+        std::condition_variable cond_{};
+        std::atomic<uint64_t> task_count_{};
         QueueType tasks_{};
-        std::vector<std::shared_ptr<LocalQueueType>> local_tasks_list_;
-        inline static thread_local std::shared_ptr<LocalQueueType> local_tasks_;
-        inline static thread_local uint32_t index_;
-        std::vector<std::thread> threads_;
+        std::vector<std::shared_ptr<LocalQueueType>> local_tasks_list_{};
+        inline static thread_local std::shared_ptr<LocalQueueType> local_tasks_{};
+        inline static thread_local uint32_t index_{};
+        std::vector<std::thread> threads_{};
     };
 
 } // namespace play
