@@ -4,6 +4,9 @@
 #include "concurrent/thread_safe_queue.h"
 #include "utility/callable_wrapper.h"
 
+#include "coroutine_wrapper/generator.h"
+#include "coroutine_wrapper/lazy.h"
+
 #include <cassert>
 #include <chrono>
 #include <coroutine>
@@ -20,43 +23,35 @@
 
 using namespace play;
 
-struct HelloCoroutine
+Generator<bool> func()
 {
-    struct HelloPromise
+    std::string str = "Hello World";
+    int32_t i = 0;
+    for (; i < str.length(); i++)
     {
-        HelloCoroutine get_return_object()
-        {
-            return std::coroutine_handle<HelloPromise>::from_promise(*this);
-        }
-        std::suspend_never initial_suspend()
-        {
-            return {};
-        }
-        // 在 final_suspend() 挂起了协程，所以要手动 destroy
-        std::suspend_always final_suspend() noexcept
-        {
-            return {};
-        }
-        void unhandled_exception() {}
-    };
+        std::cout << str[i] << std::ends;
+        co_yield true;
+    }
+    std::cout << std::endl;
+}
 
-    using promise_type = HelloPromise;
-    HelloCoroutine(std::coroutine_handle<HelloPromise> h)
-        : handle(h) {}
-
-    std::coroutine_handle<HelloPromise> handle;
-};
-
-HelloCoroutine hello()
+int64_t fibImpl(int32_t n)
 {
-    std::cout << "Hello " << std::endl;
-    co_await std::suspend_always{};
-    std::cout << "Coroutine " << std::endl;
+    if (n <= 2)
+    {
+        return 1;
+    }
+    return fibImpl(n - 2) + fibImpl(n - 1);
+}
+
+Lazy<int64_t> fib(int32_t n)
+{
+    co_return fibImpl(n);
 }
 
 int main()
 {
-    HelloCoroutine co = hello();
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
-    co.handle.resume();
+    auto lazy = fib(10);
+    std::cout << "===" << std::endl;
+    std::cout << lazy() << std::endl;
 }
